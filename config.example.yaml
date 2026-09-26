@@ -1,0 +1,141 @@
+# ============================================================================
+# qqaibot 配置文件
+# 字符串里的 ${VAR} 会从 .env / 环境变量取值。
+# WebUI 里改的设置会存进数据库并覆盖本文件，删掉 data/bot.db 即恢复这里的内容。
+# ============================================================================
+
+# ---------------------------------------------------------------- SnowLuma 连接
+snowluma:
+  # SnowLuma WebUI 里 OneBot「正向 WebSocket」的地址
+  wsUrl: ws://127.0.0.1:3001/
+  # 与 SnowLuma onebot_<uin>.json 里的 accessToken 保持一致，没有就留空
+  accessToken: ${SNOWLUMA_TOKEN}
+  reconnect: true
+  requestTimeoutMs: 30000
+
+# -------------------------------------------------------------------- 系统提示词
+prompt:
+  # 是否在 system 里附加 [环境] 段（时间/群名/对话人）
+  includeContext: true
+  timezone: Asia/Shanghai
+
+# ------------------------------------------------------------------ 聊天模型
+chat:
+  baseUrl: https://api.deepseek.com/v1
+  apiKey: ${CHAT_API_KEY}
+  model: deepseek-chat
+  systemPrompt: |
+    你是一个群聊机器人，说话简短、口语化、有自己的性格，不暴露自己是 AI。
+  temperature: 0.8
+  maxTokens: 1024
+
+# ------------------------------------------------------------------ 识图模型
+# 和聊天模型完全独立，可以用不同厂商 / 不同模型
+vision:
+  enabled: true
+  baseUrl: https://dashscope.aliyuncs.com/compatible-mode/v1
+  apiKey: ${VISION_API_KEY}
+  model: qwen-vl-max
+  # 单张图片超过该字节数就不发给模型，降级为 [图片]
+  maxBytes: 5242880
+  # 单次请求最多携带几张图片（当前消息 + 引用 + 历史）
+  maxImagesPerRequest: 4
+
+# -------------------------------------------------------------- 历史里的图片
+historyImages:
+  # none   = 历史图片一律显示为 [图片]
+  # latest = 把最近 maxImages 张真实图片按原顺序发回给多模态模型（推荐）
+  # caption= 首次收到时让模型生成文字描述，历史里用描述代替（省 token）
+  mode: latest
+  maxImages: 4
+  captionPrompt: 用一两句话客观描述这张图片的内容，不要推测用户意图。
+  captionMaxTokens: 120
+  # 留空表示复用 vision.model，也可以填一个更便宜的识图模型
+  captionModel: ""
+
+# ------------------------------------------------------------------ 引用消息
+quote:
+  enabled: true
+  # 调用 get_msg 取被引用消息的原文（含图片）
+  resolve: true
+  maxChars: 500
+  includeText: true
+  includeImage: true
+
+# -------------------------------------------------------------------- @别人
+mentions:
+  # 把 @某人 解析成群名片 / 昵称
+  resolveNames: true
+  memberCacheTtlMs: 600000
+
+# ---------------------------------------------------------------------- 语音
+voice:
+  # 使用 SnowLuma 的 fetch_ptt_text 做语音转文字
+  transcribe: true
+
+# ---------------------------------------------------------------------- 记忆
+context:
+  # 记录群里的全部消息作为上下文（机器人仍然只在被 @ 时回复）
+  recordAll: true
+  # 被动消息（没 @ 机器人的那些）里的图片是否也下载保存；
+  # 开启后图片会按「文字 → 图片 → 文字」的原顺序直接发给多模态模型，不转文字
+  recordImages: true
+  # 每个会话保留最近多少轮（一轮 ≈ 2 条消息）
+  maxTurns: 20
+  # 整个上下文最多多少字符，超出就从最早的丢
+  maxContextChars: 12000
+  # 给每条历史消息加上时间戳
+  includeTimestamps: false
+
+# ---------------------------------------------------------------------- 触发
+trigger:
+  # 群里只 @ 了机器人但没内容时，是否回一句
+  replyOnEmptyMention: false
+  emptyReplyText: 嗯？
+  # 群白名单，留空 = 所有群；填了就只响应这些群
+  groups: []
+  # 私聊白名单，留空 = 所有人
+  privateUsers: []
+
+# ---------------------------------------------------------------------- 回复
+reply:
+  maxCharsPerMessage: 1500
+  # 群聊回复时是否引用原消息
+  quoteOnGroup: true
+  # 把 Markdown 降级为纯文本
+  stripMarkdown: true
+  emptyFallback: ""
+  errorReply: ""
+  # 群里被 @ 时给那条消息贴一个表情回应（QQ emoji id，留空 = 关闭）
+  emojiReaction: "424"
+
+# ------------------------------------------------------------------ AI 调用
+ai:
+  timeoutMs: 60000
+  maxRetries: 1
+
+# ---------------------------------------------------------------------- 限流
+limits:
+  # 同一个人触发的最小间隔
+  perUserCooldownMs: 2000
+  # 同一会话忙时的策略：queue 排队 / drop 丢弃 / ignore 忽略
+  busyStrategy: queue
+  maxQueuePerScope: 5
+
+# -------------------------------------------------------------------- WebUI
+webui:
+  enabled: true
+  host: 127.0.0.1
+  port: 8787
+  # 留空 = 免密（只监听本机，默认安全）
+  password: ""
+
+# ---------------------------------------------------------------------- 日志
+logging:
+  level: info
+  keepDays: 7
+  console: true
+
+# ------------------------------------------------------------------ 图片文件
+media:
+  keepDays: 3

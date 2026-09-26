@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>qqaibot 管理面板</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <div id="auth" class="auth hidden">
+    <div class="auth-card">
+      <h1>qqaibot</h1>
+      <p>请输入管理密码</p>
+      <input id="authInput" type="password" placeholder="密码" autocomplete="current-password" />
+      <button id="authBtn" class="primary">进入</button>
+      <p id="authError" class="error"></p>
+    </div>
+  </div>
+
+  <div id="shell" class="shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <span class="dot" id="connDot"></span>
+        <div>
+          <strong>qqaibot</strong>
+          <small id="brandSub">连接中…</small>
+        </div>
+      </div>
+      <nav>
+        <button class="nav active" data-tab="overview">概览</button>
+        <button class="nav" data-tab="scopes">会话设置</button>
+        <button class="nav" data-tab="models">模型与设置</button>
+        <button class="nav" data-tab="usage">用量统计</button>
+        <button class="nav" data-tab="logs">运行日志</button>
+        <button class="nav" data-tab="test">在线测试</button>
+      </nav>
+      <div class="sidebar-foot">
+        <button id="logoutBtn" class="ghost hidden">退出登录</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <section id="tab-overview" class="tab active"></section>
+      <section id="tab-scopes" class="tab"></section>
+      <section id="tab-models" class="tab"></section>
+      <section id="tab-usage" class="tab"></section>
+      <section id="tab-logs" class="tab"></section>
+      <section id="tab-test" class="tab"></section>
+    </main>
+  </div>
+
+  <div id="toast" class="toast"></div>
+  <script src="./app.js"></script>
+</body>
+</html>

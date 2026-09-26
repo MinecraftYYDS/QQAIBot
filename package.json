@@ -1,0 +1,32 @@
+{
+  "name": "qqaibot",
+  "version": "1.0.0",
+  "private": true,
+  "description": "QQ AI bot bridging to SnowLuma (OneBot v11) with a local WebUI",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "node esbuild.config.mjs",
+    "package": "node scripts/package.mjs",
+    "test": "node test/e2e.mjs",
+    "dev": "node --enable-source-maps dist/bot.mjs",
+    "start": "node --disable-warning=ExperimentalWarning dist/bot.mjs"
+  },
+  "dependencies": {
+    "@snowluma/sdk": "1.14.15",
+    "dotenv": "^16.4.7",
+    "openai": "^4.77.0",
+    "yaml": "^2.7.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "@types/ws": "^8.18.1",
+    "esbuild": "^0.24.2",
+    "typescript": "^5.7.3",
+    "ws": "^8.21.3"
+  }
+}
