@@ -260,7 +260,9 @@ loaders.models = async function () {
         <div class="field"><label>温度 temperature</label>
           <input id="chatTemperature" type="number" step="0.1" min="0" max="2" placeholder="${d.base.chat.temperature}" value="${esc(val('chat.temperature', ''))}" /></div>
         <div class="field"><label>最大回复 tokens</label>
-          <input id="chatMaxTokens" type="number" min="1" placeholder="${d.base.chat.maxTokens}" value="${esc(val('chat.maxTokens', ''))}" /></div>
+          <input id="chatMaxTokens" type="number" min="1" placeholder="${d.base.chat.maxTokens}" value="${esc(val('chat.maxTokens', ''))}" />
+          <div class="hint">带「思考过程」的推理模型（GLM-4.5 / DeepSeek 等）思考会先占用额度，
+            太小会出现「只贴表情、不说话」。建议 4096 以上。</div></div>
       </div>
       <div class="field" style="margin-top:12px"><label>系统提示词 / 人格（全局默认）</label>
         <textarea id="systemPrompt" placeholder="${esc(truncate(d.base.chat.systemPrompt, 120))}">${esc(val('chat.systemPrompt', ''))}</textarea></div>

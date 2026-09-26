@@ -16,6 +16,10 @@ export interface AiCallOptions {
 
 export interface AiResult {
   content: string;
+  /** Provider finish reason, e.g. `stop` or `length` (length = 被 max_tokens 截断). */
+  finishReason: string;
+  /** Length of `reasoning_content`, when the provider returns one. */
+  reasoningChars: number;
   promptTokens: number;
   completionTokens: number;
 }
@@ -56,8 +60,11 @@ export class AiClient {
           temperature: opts.temperature,
           max_tokens: opts.maxTokens,
         });
+        const choice = res.choices?.[0];
         return {
-          content: extractContent(res.choices?.[0]?.message?.content),
+          content: extractContent(choice?.message?.content),
+          finishReason: String(choice?.finish_reason ?? ''),
+          reasoningChars: reasoningLength(choice?.message),
           promptTokens: Number(res.usage?.prompt_tokens ?? 0),
           completionTokens: Number(res.usage?.completion_tokens ?? 0),
         };
@@ -91,6 +98,12 @@ function extractContent(content: unknown): string {
       .join('');
   }
   return '';
+}
+
+function reasoningLength(message: unknown): number {
+  if (!message || typeof message !== 'object') return 0;
+  const raw = (message as Record<string, unknown>).reasoning_content;
+  return typeof raw === 'string' ? raw.length : 0;
 }
 
 function isRetriable(error: unknown): boolean {

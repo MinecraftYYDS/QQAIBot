@@ -1,6 +1,6 @@
 {
   "name": "qqaibot",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "QQ AI bot bridging to SnowLuma (OneBot v11) with a local WebUI",
   "type": "module",

@@ -25,7 +25,7 @@ export const ConfigSchema = obj({
       .string()
       .default('你是一个友好的群聊助手，说话简短、口语化，不暴露自己是 AI。'),
     temperature: z.number().min(0).max(2).default(0.8),
-    maxTokens: z.number().int().positive().default(1024),
+    maxTokens: z.number().int().positive().default(4096),
   }).default({}),
   vision: obj({
     enabled: z.boolean().default(true),

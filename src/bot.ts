@@ -7,7 +7,7 @@ import {
 } from '@snowluma/sdk';
 import type { AppConfig } from './config.js';
 import type { Database } from './db.js';
-import { AiClient } from './ai.js';
+import { AiClient, type AiResult } from './ai.js';
 import { createLogger } from './logger.js';
 import { MentionResolver } from './mentions.js';
 import {
@@ -270,35 +270,46 @@ export class QqAiBot {
     // Whitelists decide whether a scope is handled at all.
     if (isGroup) {
       if (this.config.trigger.groups.length > 0 && !this.config.trigger.groups.includes(groupId as number)) {
+        log.debug('群 %s 不在白名单内，忽略', scope);
         return;
       }
     } else if (
       this.config.trigger.privateUsers.length > 0 &&
       !this.config.trigger.privateUsers.includes(userId)
     ) {
+      log.debug('用户 %s 不在白名单内，忽略', scope);
       return;
     }
 
     const resolved = this.settings.resolve(scope);
-    if (!resolved.enabled) return;
+    if (!resolved.enabled) {
+      log.debug('%s 已关闭（enabled=false），忽略', scope);
+      return;
+    }
 
     // In groups only a mention triggers a reply. Without a mention the message
     // is still stored as context when `context.recordAll` is on.
     const mentioned = isGroup ? mentionedSelf(event.message, event.raw_message, selfId) : true;
     if (!mentioned) {
-      if (!resolved.recordAll) return;
+      if (!resolved.recordAll) {
+        log.debug('群 %s 未 @ 机器人且未开启全量记录，忽略', scope);
+        return;
+      }
       this.queue.enqueueChain(scope, () => this.recordPassive(event, scope, isGroup, groupId, selfId));
       return;
     }
 
-    if (!this.passCooldown(scope, userId)) return;
+    if (!this.passCooldown(scope, userId)) {
+      log.info('冷却中，忽略 %s 的这次触发（间隔需 >= %dms）', scope, this.config.limits.perUserCooldownMs);
+      return;
+    }
 
     this.queue.enqueue(
       scope,
       this.config.limits.maxQueuePerScope,
       this.config.limits.busyStrategy,
       () => this.process(event, scope, isGroup, groupId, selfId),
-      () => log.debug('busy, dropped message for %s', scope),
+      () => log.warn('同一会话任务繁忙，丢弃了一条触发消息：%s', scope),
     );
   }
 
@@ -433,6 +444,11 @@ export class QqAiBot {
     if (!hasContent(normalized.parts) && normalized.images.length === 0) {
       if (this.config.trigger.replyOnEmptyMention) {
         await this.sendReply(event, scope, isGroup, this.config.trigger.emptyReplyText, false);
+      } else {
+        log.info(
+          '收到 %s 的空触发（只有 @ 或只有引用，没有文字/图片），replyOnEmptyMention=false，不回复',
+          scope,
+        );
       }
       return;
     }
@@ -529,9 +545,9 @@ export class QqAiBot {
       history.length,
     );
 
-    let replyText: string;
+    let result: AiResult;
     try {
-      const result = await this.ai.complete({
+      result = await this.ai.complete({
         baseUrl: resolved[built.kind].baseUrl,
         apiKey: resolved[built.kind].apiKey,
         model: built.model,
@@ -541,7 +557,6 @@ export class QqAiBot {
         timeoutMs: this.config.ai.timeoutMs,
         maxRetries: this.config.ai.maxRetries,
       });
-      replyText = result.content;
       this.db.addUsage({
         day: new Date().toISOString().slice(0, 10),
         scope,
@@ -552,20 +567,35 @@ export class QqAiBot {
         completionTokens: result.completionTokens,
       });
     } catch (e) {
-      log.error('AI call failed for %s: %s', scope, (e as Error).message);
+      log.error('AI 调用失败 %s：%s', scope, (e as Error).message);
       if (this.config.reply.errorReply) {
         await this.sendReply(event, scope, isGroup, this.config.reply.errorReply, false);
       }
       return;
     }
 
-    const cleaned = this.config.reply.stripMarkdown ? stripMarkdown(replyText) : replyText.trim();
+    const cleaned = this.config.reply.stripMarkdown ? stripMarkdown(result.content) : result.content.trim();
     if (!cleaned) {
+      const hint =
+        result.finishReason === 'length'
+          ? `输出被 max_tokens 截断${result.reasoningChars > 0 ? '（该模型带思考过程，额度被思考用光了）' : ''}，请到管理面板「模型与设置」把「最大回复 tokens」调大（如 4096）`
+          : '模型没有返回任何正文内容';
+      log.warn(
+        '模型返回空内容，未回复 %s（model=%s finish_reason=%s 推理字符=%d 输出tokens=%d）：%s',
+        scope,
+        built.model,
+        result.finishReason || '-',
+        result.reasoningChars,
+        result.completionTokens,
+        hint,
+      );
       if (this.config.reply.emptyFallback) {
         await this.sendReply(event, scope, isGroup, this.config.reply.emptyFallback, false);
       }
       return;
     }
+
+    log.debug('%s 回复 %d 字（finish_reason=%s）', scope, cleaned.length, result.finishReason || '-');
 
     await this.sendReply(event, scope, isGroup, cleaned, isGroup && this.config.reply.quoteOnGroup);
     this.db.appendMessage({ scope, role: 'assistant', speaker: null, content: cleaned });
